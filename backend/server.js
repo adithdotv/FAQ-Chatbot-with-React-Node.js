@@ -46,12 +46,18 @@ app.post("/ask", async (req, res) => {
   } else {
     answer = "Sorry, I don’t know the answer.";
   }
-
   res.json({answer})
 
   const chatEntry = new Chat({ userMessage: question, botResponse: answer });
   await chatEntry.save();
 });
+
+//API Endpoint: Fetch Chat History
+app.get('/chat-history', async(req, res) => {
+  const history = await Chat.find()
+
+  res.json({history})
+})
 
 
 // Start server
