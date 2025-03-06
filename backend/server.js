@@ -18,6 +18,7 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 
 // Import FAQ model
 const FAQ = require("./Faq");
+const Chat = require("./Chat")
 
 // Pre-load FAQs and create a fuzzy search index
 let fuse;
@@ -39,13 +40,19 @@ app.post("/ask", async (req, res) => {
   const { question } = req.body;
 
   const result = fuse.search(question);
-  console.log(result)
+  let answer;
   if (result.length > 0){
-    res.json({ answer: result[0].item.answer });
+    answer = result[0].item.answer;
   } else {
-    res.json({ answer: "Sorry, I don’t know the answer." });
+    answer = "Sorry, I don’t know the answer.";
   }
+
+  res.json({answer})
+
+  const chatEntry = new Chat({ userMessage: question, botResponse: answer });
+  await chatEntry.save();
 });
+
 
 // Start server
 const PORT = process.env.PORT || 5000;
