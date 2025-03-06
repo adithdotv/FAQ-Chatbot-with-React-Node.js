@@ -1,9 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const chatContainerRef = useRef(null); // ✅ Ref for chat container
+
+  useEffect(() => {
+    const getHistory = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/chat-history");
+        const formattedMessages = response.data.history.map((msg) => [
+          { text: msg.userMessage, sender: "user" },
+          { text: msg.botResponse, sender: "bot" },
+        ]).flat();
+
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error("Error fetching history:", error);
+      }
+    };
+
+    getHistory();
+  }, []);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -20,22 +45,28 @@ const App = () => {
       console.error("Error fetching answer:", error);
       setMessages((prev) => [...prev, { text: "Error fetching answer.", sender: "bot" }]);
     }
-
   };
 
-   // Handle Enter key press
-   const handleKeyDown = (e) => {
+  // Handle Enter key press
+  const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // Prevents adding a new line in input
+      e.preventDefault();
       handleSend();
     }
-   }
+  };
 
   return (
     <div className="flex flex-col h-screen p-6 bg-gray-100 w-screen">
-      <div className="flex-1 overflow-y-auto bg-white p-4 rounded-lg shadow-md">
-        {messages.map((msg, index) => (
-          <div key={index} className={`my-2 p-2 rounded-lg ${msg.sender === "user" ? "bg-blue-500 text-white self-end" : "bg-gray-300"}`}>
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto bg-white p-4 rounded-lg shadow-md flex flex-col">
+      {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`my-2 p-2 rounded-lg max-w-xs ${
+              msg.sender === "user"
+                ? "bg-blue-500 text-white self-end"
+                : "bg-gray-300 self-start"
+            }`}
+          >
             {msg.text}
           </div>
         ))}
