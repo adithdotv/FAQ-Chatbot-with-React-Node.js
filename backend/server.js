@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const Fuse = require("fuse.js")
 
 const app = express();
 
@@ -18,15 +19,29 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 // Import FAQ model
 const FAQ = require("./Faq");
 
+// Pre-load FAQs and create a fuzzy search index
+let fuse;
+const loadFAQs = async () => {
+  const faqs = await FAQ.find();
+  fuse = new Fuse(faqs, {
+    keys: ["question"],
+    includeScore: true,
+    threshold: 0.7,
+    distance: 50,
+    minMatchCharLength: 3,
+    ignoreLocation: true,
+  });
+};
+loadFAQs(); // Load FAQs on startup
+
 // API Endpoint: Handle user questions
 app.post("/ask", async (req, res) => {
   const { question } = req.body;
 
-  // Find matching question in the database
-  const faq = await FAQ.findOne({ question: { $regex: new RegExp(question, "i") } });
-
-  if (faq) {
-    res.json({ answer: faq.answer });
+  const result = fuse.search(question);
+  console.log(result)
+  if (result.length > 0){
+    res.json({ answer: result[0].item.answer });
   } else {
     res.json({ answer: "Sorry, I don’t know the answer." });
   }
